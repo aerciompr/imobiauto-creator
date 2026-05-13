@@ -68,10 +68,12 @@ export const parseRawListing = async (rawText: string): Promise<PropertyData | n
     `;
 
     let data: any = {};
+    let useOpenAi = config.provider === 'openai' && !!config.openaiKey;
 
-    if (config.provider === 'openai' && config.openaiKey) {
-        const openai = new OpenAI({ apiKey: config.openaiKey, dangerouslyAllowBrowser: true });
-        const jsonSchemaText = `
+    if (useOpenAi) {
+        try {
+            const openai = new OpenAI({ apiKey: config.openaiKey, dangerouslyAllowBrowser: true });
+            const jsonSchemaText = `
 Retorne o resultado EXATAMENTE neste schema em formato JSON:
 {
   "title": "",
@@ -90,17 +92,23 @@ Retorne o resultado EXATAMENTE neste schema em formato JSON:
     "sections": [ { "title": "", "content": [""], "isList": false } ]
   }
 }
-        `;
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "Extraia os dados em JSON de acordo com o pedido. " + jsonSchemaText },
-                { role: "user", content: prompt }
-            ],
-            response_format: { type: "json_object" }
-        });
-        data = JSON.parse(response.choices[0].message.content || '{}');
-    } else {
+            `;
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "Extraia os dados em JSON de acordo com o pedido. " + jsonSchemaText },
+                    { role: "user", content: prompt }
+                ],
+                response_format: { type: "json_object" }
+            });
+            data = JSON.parse(response.choices[0].message.content || '{}');
+        } catch (err) {
+            console.warn("OpenAI API failed, falling back to Gemini", err);
+            useOpenAi = false;
+        }
+    } 
+    
+    if (!useOpenAi) {
         const ai = getAI();
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-pro',
@@ -244,11 +252,13 @@ export const generatePDFContent = async (
 
     parts.push({ text: textPrompt });
     let data: any = {};
+    let useOpenAi = config.provider === 'openai' && !!config.openaiKey;
 
-    if (config.provider === 'openai' && config.openaiKey) {
-        const openai = new OpenAI({ apiKey: config.openaiKey, dangerouslyAllowBrowser: true });
-        
-        const jsonSchemaText = `
+    if (useOpenAi) {
+        try {
+            const openai = new OpenAI({ apiKey: config.openaiKey, dangerouslyAllowBrowser: true });
+            
+            const jsonSchemaText = `
 Retorne o resultado EXATAMENTE neste schema em formato JSON:
 {
   "marketingTitle": "",
@@ -256,18 +266,24 @@ Retorne o resultado EXATAMENTE neste schema em formato JSON:
   "coverHighlights": ["", "", "", ""],
   "sections": [ { "title": "", "content": ["", ""], "isList": false } ]
 }
-        `;
+            `;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o", // Using gpt-4o here for better writing vs 4o-mini
-            messages: [
-                { role: "system", content: SYSTEM_INSTRUCTION + "\n\nResponda APENAS com um objeto JSON correspondendo à ESTRUTURA OBRIGATÓRIA solicitada. " + jsonSchemaText },
-                { role: "user", content: textPrompt }
-            ],
-            response_format: { type: "json_object" }
-        });
-        data = JSON.parse(response.choices[0].message.content || '{}');
-    } else {
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o", // Using gpt-4o here for better writing vs 4o-mini
+                messages: [
+                    { role: "system", content: SYSTEM_INSTRUCTION + "\n\nResponda APENAS com um objeto JSON correspondendo à ESTRUTURA OBRIGATÓRIA solicitada. " + jsonSchemaText },
+                    { role: "user", content: textPrompt }
+                ],
+                response_format: { type: "json_object" }
+            });
+            data = JSON.parse(response.choices[0].message.content || '{}');
+        } catch (err) {
+            console.warn("OpenAI API failed, falling back to Gemini", err);
+            useOpenAi = false;
+        }
+    } 
+    
+    if (!useOpenAi) {
         const ai = getAI();
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-pro', 
