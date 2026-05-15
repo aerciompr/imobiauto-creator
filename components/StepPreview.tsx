@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { PropertyData, PrintableImage } from '../types';
 import { ArrowLeft, CheckCircle2, X, Eye, Printer, Download, Loader2 } from 'lucide-react';
 import PrintLayout from './PrintLayout';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { generatePropertyPdf } from '../utils/pdfGenerator';
 
 interface StepPreviewProps {
   processedImages: PrintableImage[]; 
@@ -29,68 +28,10 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-        const printContainer = document.querySelector('.print-only-container') as HTMLElement;
-        if (!printContainer) return;
-
-        // Temporarily make it visible to capture
-        printContainer.classList.remove('hidden');
-        printContainer.classList.add('block');
-        
-        // Wait a frame for rendering
-        await new Promise(r => setTimeout(r, 100));
-
-        const pages = printContainer.querySelectorAll('.pdf-page');
-        
-        // Handle first page orientation based on its class
-        const firstPageLandscape = pages[0]?.classList.contains('is-landscape') || false;
-        const pdf = new jsPDF({ 
-            orientation: firstPageLandscape ? 'l' : 'p', 
-            unit: 'mm', 
-            format: 'a4' 
-        });
-
-        for (let i = 0; i < pages.length; i++) {
-            const pageEl = pages[i] as HTMLElement;
-            const isLandscape = pageEl.classList.contains('is-landscape');
-            
-            if (i > 0) {
-                // Add new page with correct orientation
-                pdf.addPage('a4', isLandscape ? 'l' : 'p');
-            }
-            
-            // Capture high resolution
-            const canvas = await html2canvas(pageEl, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                allowTaint: true
-            });
-            
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            
-            // Width and Height in mm for the current page orientation
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        }
-
-        // Hide it back
-        printContainer.classList.add('hidden');
-        printContainer.classList.remove('block');
-
-        const safeTitle = data.title ? data.title.replace(/[^a-zA-Z0-9]/g, '_') : 'Ficha_Imovel';
-        pdf.save(`${safeTitle.substring(0, 30)}.pdf`);
-        
+        await generatePropertyPdf(data, processedImages, logoUrl);
     } catch (error) {
         console.error("Error generating PDF", error);
         alert("Ocorreu um erro ao gerar o PDF. Tente imprimir a tela.");
-        
-        const printContainer = document.querySelector('.print-only-container') as HTMLElement;
-        if (printContainer) {
-            printContainer.classList.add('hidden');
-            printContainer.classList.remove('block');
-        }
     } finally {
         setIsGenerating(false);
     }
@@ -181,7 +122,7 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
               <div className="p-8 space-y-6">
                   
                   <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-sm text-amber-900 mb-4 text-center">
-                      <strong>Dica:</strong> Você pode visualizar primeiro ou fazer o download direto do seu PDF.
+                      <strong>Dica:</strong> O download gera páginas de texto pesquisável e fotos em alta qualidade.
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

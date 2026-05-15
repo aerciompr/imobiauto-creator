@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Image as ImageIcon, Trash2, XCircle, Sparkles, Loader2, Video as VideoIcon, Film, Archive, FileType, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
-import { enhanceImageWithAI, filterRealEstateImages, rankRealEstateImages } from '../services/geminiService';
-import { readFileAsDataURL, extractUniqueFramesFromVideo, extractFilesFromZip, resizeImageForAI } from '../utils/imageProcessing';
+import { enhanceImageWithAI } from '../services/geminiService';
+import { readFileAsDataURL, extractUniqueFramesFromVideo, extractFilesFromZip } from '../utils/imageProcessing';
 import { extractDataFromPDF } from '../utils/pdfExtractor';
 
 interface StepUploadProps {

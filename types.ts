@@ -12,6 +12,8 @@ export interface AIRealEstateContent {
   coverHighlights?: string[]; 
   // Instead of a generic description, we enforce structure
   sections: PDFSection[];
+  // Full technical details that should be preserved without overcrowding the cover.
+  technicalAppendix?: PDFSection[];
   locationHighlight: string;
 }
 

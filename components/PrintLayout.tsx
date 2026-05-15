@@ -71,6 +71,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
     headline: "Oportunidade Exclusiva",
     coverHighlights: [],
     sections: [],
+    technicalAppendix: [],
     locationHighlight: data.location || ""
   };
 
@@ -91,7 +92,15 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   const PAGE_1_MAX_UNITS = 40; // Reduced from 60 to prevent overflow
   const PAGE_N_MAX_UNITS = 65; // Reduced from 85
 
-  ai.sections.forEach((section) => {
+  const previewSections = [
+      ...(ai.sections || []),
+      ...((ai.technicalAppendix || []).map((section) => ({
+          ...section,
+          title: section.title.startsWith('Anexo') ? section.title : `Anexo Técnico - ${section.title}`
+      })))
+  ];
+
+  previewSections.forEach((section) => {
       let sectionTitleAdded = false;
       let currentSectionContent: string[] = [];
       
@@ -228,7 +237,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
           )}
 
           <div className={`flex flex-row gap-8 items-start w-full ${pIdx > 0 ? 'mt-4' : ''}`}>
-              {/* Calculate columns locally to ensure html2canvas compatibility */}
+              {/* Calculate columns locally for a stable browser preview */}
               {(() => {
                   const col1: typeof pageSections = [];
                   const col2: typeof pageSections = [];

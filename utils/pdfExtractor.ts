@@ -1,5 +1,6 @@
 
 import * as pdfjsLibProxy from 'pdfjs-dist';
+import { ocrPDFPages } from '../services/geminiService';
 
 // Fix: Handle different module export structures (ESM/CommonJS interop)
 const pdfjsLib = (pdfjsLibProxy as any).default || pdfjsLibProxy;
@@ -176,6 +177,27 @@ const renderPageAndSegment = async (page: any, pageNum: number): Promise<File[]>
     return [];
 };
 
+const renderPageForOCR = async (page: any): Promise<string | null> => {
+    try {
+        const viewport = page.getViewport({ scale: 1.4 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) return null;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        canvas.width = 0;
+        canvas.height = 0;
+        return dataUrl;
+    } catch (e) {
+        console.warn('Falha ao preparar página para OCR:', e);
+        return null;
+    }
+};
+
 // --- FUNÇÃO PRINCIPAL ---
 
 export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFData> => {
@@ -187,6 +209,7 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
 
   let fullText = '';
   const extractedImages: File[] = [];
+  const ocrCandidates: { page: number; image: string }[] = [];
   const processedImageIds = new Set<string>();
 
   // Helper de conversão direta
@@ -321,6 +344,11 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
               }
           } catch (e) {}
 
+          if (pageTextRaw.trim().length < 40 && ocrCandidates.length < 12) {
+              const image = await renderPageForOCR(page);
+              if (image) ocrCandidates.push({ page: pageNum, image });
+          }
+
           // Tentativa 1: Extração Direta (Segura)
           try {
               const ops = await page.getOperatorList();
@@ -345,6 +373,13 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
   // Wait for all pages to be parsed concurrently (drastically speeds up processing)
   const results = await Promise.all(pagePromises);
   results.forEach(files => extractedImages.push(...files));
+
+  if (ocrCandidates.length > 0) {
+      const ocrText = await ocrPDFPages(ocrCandidates.sort((a, b) => a.page - b.page));
+      if (ocrText.trim()) {
+          fullText += `\n--- Texto OCR ---\n${ocrText}\n`;
+      }
+  }
 
   return { text: fullText, images: extractedImages };
 };

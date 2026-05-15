@@ -5,7 +5,7 @@ import StepUpload from './components/StepUpload';
 import StepDetails from './components/StepDetails';
 import StepWatermark from './components/StepWatermark'; // New Component
 import StepPreview from './components/StepPreview';
-import { CheckCircle, Image as ImageIcon, FileText, Stamp, Printer, Settings } from 'lucide-react';
+import { CheckCircle, Image as ImageIcon, FileText, Stamp, Printer, Settings, Server } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>(Step.UPLOAD);
@@ -33,9 +33,6 @@ const App: React.FC = () => {
   });
 
   const [showSettings, setShowSettings] = useState(false);
-  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem('ai_provider') || 'gemini');
-  const [openAiKey, setOpenAiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
-  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
 
   // AUTOMATION: Fetch specific assets on load
   useEffect(() => {
@@ -68,13 +65,6 @@ const App: React.FC = () => {
   const handleWatermarkComplete = (images: PrintableImage[]) => {
       setFinalImages(images);
       nextStep();
-  };
-
-  const handleSaveSettings = () => {
-      localStorage.setItem('ai_provider', aiProvider);
-      localStorage.setItem('openai_api_key', openAiKey);
-      localStorage.setItem('gemini_api_key', geminiKey);
-      setShowSettings(false);
   };
 
   // Stepper Config
@@ -123,54 +113,23 @@ const App: React.FC = () => {
                 </div>
                 
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Qual IA você deseja usar?</label>
-                        <select 
-                            value={aiProvider}
-                            onChange={(e) => setAiProvider(e.target.value)}
-                            className="w-full p-2 border border-slate-300 rounded focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-                        >
-                            <option value="gemini">Gemini (Google) - Padrão</option>
-                            <option value="openai">ChatGPT (OpenAI)</option>
-                        </select>
-                        <p className="text-xs text-slate-500 mt-1">Os modelos usados consomem tokens baseados no tamanho do texto/PDF.</p>
+                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <Server className="mt-0.5 h-5 w-5 text-amber-600" />
+                        <div>
+                            <p className="text-sm font-semibold text-slate-800">OpenAI via servidor</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                                A chave de API agora fica apenas no servidor, via variável <b>OPENAI_API_KEY</b> ou <b>API_KEY</b>. O navegador não armazena nem expõe credenciais.
+                            </p>
+                        </div>
                     </div>
-
-                    {aiProvider === 'openai' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1">Chave de API OpenAI (Obrigatório)</label>
-                            <input 
-                                type="password" 
-                                value={openAiKey}
-                                onChange={(e) => setOpenAiKey(e.target.value)}
-                                placeholder="sk-..." 
-                                className="w-full p-2 border border-slate-300 rounded focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-                            />
-                            <p className="text-xs text-slate-500 mt-1">Usaremos o modelo <b>gpt-4o-mini</b> ou similar para performance e economia. Sua chave fica salva no seu navegador.</p>
-                        </div>
-                    )}
-
-                    {aiProvider === 'gemini' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1">Chave de API Gemini (Opcional)</label>
-                            <input 
-                                type="password" 
-                                value={geminiKey}
-                                onChange={(e) => setGeminiKey(e.target.value)}
-                                placeholder="Padrão do Sistema..." 
-                                className="w-full p-2 border border-slate-300 rounded focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-                            />
-                            <p className="text-xs text-slate-500 mt-1">Deixe em branco para usar a cota limite gratuita que vem embutida, ou coloque a sua (do Google AI Studio) caso esteja estourando o limite de 15 RPM.</p>
-                        </div>
-                    )}
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
                     <button 
-                        onClick={handleSaveSettings}
+                        onClick={() => setShowSettings(false)}
                         className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded transition"
                     >
-                        Salvar e Fechar
+                        Fechar
                     </button>
                 </div>
             </div>
