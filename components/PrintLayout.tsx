@@ -89,7 +89,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   
   // Use a more aggressive estimate for available space to maximize first page
   // With 2 columns, we have roughly double the units. 1 unit = roughly 1 line
-  const PAGE_1_MAX_UNITS = 40; // Reduced from 60 to prevent overflow
+  const PAGE_1_MAX_UNITS = 55; // Keep commercial content on one page when compact
   const PAGE_N_MAX_UNITS = 65; // Reduced from 85
 
   const isSubstantialSection = (section: { content: string[] }) => {
@@ -118,7 +118,10 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
           ...section,
           title: section.title.startsWith('Anexo') ? section.title : `Anexo Técnico - ${section.title}`
       })))
-  ].slice(0, 6);
+  ].slice(0, 6).map((section) => ({
+      ...section,
+      content: section.content.slice(0, section.isList ? 8 : 3)
+  }));
 
   previewSections.forEach((section) => {
       let sectionTitleAdded = false;
@@ -200,8 +203,8 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
             <div className="mt-4 mb-6 border-b-2 border-[#fbbf24] pb-6">
                  <div className="flex justify-between items-start mb-6 gap-6">
                      <div className="flex-1 pr-4">
-                        <h1 className="font-serif text-[22pt] font-black text-[#0f172a] uppercase leading-[1.2] mb-3 break-words">{ai.marketingTitle}</h1>
-                        <h2 className="text-[#d97706] text-base font-bold leading-snug uppercase tracking-wide break-words">{ai.headline}</h2>
+                        <h1 className="font-serif text-[20pt] font-black text-[#0f172a] uppercase leading-[1.15] mb-3 break-words">{ai.marketingTitle}</h1>
+                        <h2 className="text-[#d97706] text-sm font-bold leading-snug uppercase tracking-wide break-words">{ai.headline}</h2>
                      </div>
                      <div className="flex-none w-2/5 text-right pt-1">
                         {(() => {
@@ -293,7 +296,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                           {section.isList ? (
                               <ul className="space-y-1 mt-2">
                                   {section.content.map((item, i) => (
-                                      <li key={i} className="flex items-start gap-2 text-sm text-slate-800 text-justify leading-relaxed font-medium">
+                                      <li key={i} className="flex items-start gap-2 text-[12px] text-slate-800 text-justify leading-relaxed font-medium">
                                           <span className="text-[#d97706] font-bold">✓</span><span className="flex-1">{item}</span>
                                       </li>
                                   ))}
@@ -301,7 +304,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                           ) : (
                               <div className="space-y-3 mt-2">
                                    {section.content.map((item, i) => (
-                                      <p key={i} className="text-sm text-slate-700 text-justify leading-relaxed indent-4">{item}</p>
+                                      <p key={i} className="text-[12px] text-slate-700 text-justify leading-relaxed indent-4">{item}</p>
                                    ))}
                               </div>
                           )}

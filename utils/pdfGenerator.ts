@@ -143,32 +143,43 @@ class PdfWriter {
     const headline = stripUnsupported(ai.headline || 'Oportunidade imobiliaria');
 
     this.doc.setTextColor(colors.ink);
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(18);
-    this.writeWrapped(title.toUpperCase(), PAGE.marginX, this.y + 7, 116, 7);
+    this.doc.setFont('times', 'bold');
+    this.doc.setFontSize(20);
+    this.writeWrapped(title.toUpperCase(), PAGE.marginX, this.y + 9, 112, 7.2);
 
     this.doc.setTextColor(colors.amberDark);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(9);
-    this.writeWrapped(headline.toUpperCase(), PAGE.marginX, this.y + 1, 118, 4);
+    this.doc.setFontSize(8.8);
+    this.writeWrapped(headline.toUpperCase(), PAGE.marginX, this.y + 2, 118, 4.4);
 
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(12);
-    this.doc.text(price, PAGE.width - PAGE.marginX, 28, { align: 'right', maxWidth: 60 });
+    this.doc.setFontSize(7.5);
+    this.doc.setTextColor('#64748b');
+    this.doc.text('A PARTIR DE:', PAGE.width - PAGE.marginX, 24, { align: 'right' });
+    this.doc.setTextColor(colors.ink);
+    this.doc.setFont('times', 'bold');
+    this.doc.setFontSize(15);
+    this.doc.text(price, PAGE.width - PAGE.marginX, 34, { align: 'right', maxWidth: 60 });
 
     if (location) {
       this.doc.setFillColor(colors.amber);
-      this.doc.roundedRect(132, 38, 62, 12, 2, 2, 'F');
+      this.doc.roundedRect(126, 42, 69, 13, 1.5, 1.5, 'F');
       this.doc.setTextColor(colors.ink);
-      this.doc.setFontSize(8);
-      this.doc.text(location.toUpperCase(), 163, 46, { align: 'center', maxWidth: 56 });
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(6.8);
+      this.doc.text(location.toUpperCase(), 160.5, 50, { align: 'center', maxWidth: 60 });
     }
 
-    this.y = 64;
+    this.y = 70;
     this.highlights(ai.coverHighlights || []);
+    this.y += 6;
+    this.doc.setDrawColor(colors.amber);
+    this.doc.setLineWidth(0.4);
+    this.doc.line(PAGE.marginX, this.y, PAGE.width - PAGE.marginX, this.y);
+    this.y += 12;
 
-    mergeCompactAppendix(ai, this.data).forEach((section) => this.section(section, { maxItems: 5 }));
+    this.twoColumnSections(mergeCompactAppendix(ai, this.data));
     this.footer();
   }
 
@@ -181,21 +192,88 @@ class PdfWriter {
     ]).slice(0, 4);
 
     this.doc.setFillColor(colors.pale);
-    this.doc.roundedRect(PAGE.marginX, this.y, PAGE.width - PAGE.marginX * 2, 28, 2, 2, 'F');
+    this.doc.roundedRect(PAGE.marginX, this.y, PAGE.width - PAGE.marginX * 2, 26, 2, 2, 'F');
     this.doc.setDrawColor(colors.amber);
     this.doc.setLineWidth(2);
-    this.doc.line(PAGE.marginX, this.y, PAGE.marginX, this.y + 28);
+    this.doc.line(PAGE.marginX, this.y, PAGE.marginX, this.y + 26);
 
     highlights.forEach((item, index) => {
       const x = PAGE.marginX + 8 + (index % 2) * 84;
-      const y = this.y + 9 + Math.floor(index / 2) * 12;
+      const y = this.y + 9 + Math.floor(index / 2) * 11;
+      const parts = stripUnsupported(item).split(' ');
+      const first = parts.shift() || item;
+      const rest = parts.join(' ');
       this.doc.setTextColor(colors.amberDark);
+      this.doc.setFont('times', 'bold');
+      this.doc.setFontSize(12);
+      this.doc.text(first, x, y, { maxWidth: 28 });
+      this.doc.setTextColor(colors.ink);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(10);
-      this.doc.text(stripUnsupported(item).toUpperCase(), x, y, { maxWidth: 72 });
+      this.doc.setFontSize(6.6);
+      this.doc.text(rest.toUpperCase(), x + 18, y, { maxWidth: 54 });
     });
 
-    this.y += 38;
+    this.y += 32;
+  }
+
+  twoColumnSections(sections: PDFSection[]) {
+    const usableBottom = PAGE.height - PAGE.footerH - 10;
+    const gap = 10;
+    const colW = (PAGE.width - PAGE.marginX * 2 - gap) / 2;
+    const startY = this.y;
+    let col = 0;
+    let y = [startY, startY];
+    const maxSections = sections.slice(0, 6);
+
+    const writeHeading = (title: string, x: number, currentY: number) => {
+      this.doc.setFont('times', 'bold');
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(colors.ink);
+      this.doc.setFillColor(colors.amber);
+      this.doc.rect(x, currentY - 3, 2.5, 2.5, 'F');
+      this.doc.text(stripUnsupported(title).toUpperCase(), x + 4.5, currentY, { maxWidth: colW - 5 });
+      this.doc.setDrawColor(colors.line);
+      this.doc.setLineWidth(0.5);
+      this.doc.line(x + 4.5, currentY + 2.2, x + colW, currentY + 2.2);
+      return currentY + 8;
+    };
+
+    maxSections.forEach((section) => {
+      const content = (section.content || []).map(stripUnsupported).filter(Boolean).slice(0, 9);
+      if (!section.title || content.length === 0) return;
+
+      const estimate = 9 + content.reduce((sum, item) => sum + Math.ceil(item.length / 44) * 3.8 + 1.5, 0);
+      if (y[col] + estimate > usableBottom && col === 0) col = 1;
+      if (y[col] + estimate > usableBottom && col === 1) return;
+
+      const x = PAGE.marginX + col * (colW + gap);
+      y[col] = writeHeading(section.title, x, y[col]);
+
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(section.isList ? 7.6 : 8.2);
+      this.doc.setTextColor(colors.muted);
+
+      content.forEach((item) => {
+        const lines = this.doc.splitTextToSize(item, colW - (section.isList ? 5 : 0));
+        if (y[col] + lines.length * 3.9 > usableBottom) return;
+        if (section.isList) {
+          this.doc.setTextColor(colors.amberDark);
+          this.doc.setFont('helvetica', 'bold');
+          this.doc.text('✓', x, y[col]);
+          this.doc.setTextColor(colors.muted);
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.text(lines, x + 5, y[col], { maxWidth: colW - 5 });
+        } else {
+          this.doc.text(lines, x, y[col], { maxWidth: colW, align: 'justify' });
+        }
+        y[col] += lines.length * 3.9 + 1.6;
+      });
+
+      y[col] += 4;
+      if (col === 0 && y[0] > usableBottom - 45) col = 1;
+    });
+
+    this.y = Math.max(y[0], y[1]);
   }
 
   section(section: PDFSection, options: { maxItems?: number } = {}) {

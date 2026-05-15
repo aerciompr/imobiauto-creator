@@ -50,7 +50,7 @@ Sua prioridade é harmonia editorial: preservar informações, mas separar resum
 REGRAS:
 1. Não invente espaços, comodidades, vistas, metragens, preços ou condições.
 2. O conteúdo principal deve ser objetivo, com frases curtas e sem repetição.
-3. A capa/ficha comercial deve caber em poucas páginas; detalhes extensos vão em technicalAppendix.
+3. A capa/ficha comercial deve caber em uma página; detalhes realmente extensos vão em technicalAppendix.
 4. Se houver muitos itens de lazer, agrupe em bullets objetivos.
 5. Remova telefones de terceiros e links irrelevantes, mas preserve dados úteis do imóvel.
 `;
@@ -238,7 +238,7 @@ REGRAS:
 3. Liste todas as tipologias/plantas, metragens e diferenciais.
 4. Preserve lazer, estrutura e informações técnicas, mas organize o excesso em aiContent.technicalAppendix.
 5. Remova telefones de terceiros e links irrelevantes, mas preserve dados do imóvel.
-6. aiContent.sections deve ser curto: no máximo 4 seções, cada uma com até 5 bullets ou 2 parágrafos.
+6. aiContent.sections deve ser curto: no máximo 3 seções, cada uma com até 4 bullets ou 1 parágrafo.
 
 Texto:
 ${rawText}
@@ -268,14 +268,15 @@ ESTRUTURA:
 1. marketingTitle: título vendedor.
 2. headline: frase curta de impacto.
 3. coverHighlights: exatamente 4 destaques curtos.
-4. sections: conteúdo principal curto, no máximo 4 seções.
+4. sections: conteúdo principal curto, no máximo 3 seções.
 5. technicalAppendix: detalhes técnicos longos, tabelas, muitas plantas ou listas extensas.
 
 REGRAS:
 - marketingTitle até 70 caracteres.
-- headline até 120 caracteres.
+- headline até 100 caracteres.
 - coverHighlights com exatamente 4 itens de até 28 caracteres.
-- sections deve ser limpo e comercial, com até 1.800 caracteres somados.
+- sections deve ser limpo e comercial, com até 1.250 caracteres somados.
+- cada seção principal deve ter título curto e até 4 bullets; use parágrafo só se for indispensável.
 - technicalAppendix preserva metragens, plantas, lazer, acabamentos, preços e características que não couberem no resumo.
 - Não invente fatos. Fotos servem apenas para coerência visual, nunca para criar informações técnicas.
 `;
