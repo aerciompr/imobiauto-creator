@@ -92,13 +92,33 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   const PAGE_1_MAX_UNITS = 40; // Reduced from 60 to prevent overflow
   const PAGE_N_MAX_UNITS = 65; // Reduced from 85
 
+  const isSubstantialSection = (section: { content: string[] }) => {
+      const content = section.content || [];
+      return content.length > 6 || content.join(' ').length > 700;
+  };
+
+  const compactUnits = (data.units || []).slice(0, 4);
   const previewSections = [
       ...(ai.sections || []),
-      ...((ai.technicalAppendix || []).map((section) => ({
+      ...((ai.technicalAppendix || []).filter((section) => !isSubstantialSection(section)).map((section) => ({
+          ...section,
+          content: section.content.slice(0, 4)
+      }))),
+      ...(compactUnits.length > 0 ? [{
+          title: 'Unidades e condições',
+          isList: true,
+          content: compactUnits.map((unit) => [
+              unit.unit,
+              unit.area && `área: ${unit.area}`,
+              unit.status && `status: ${unit.status}`,
+              unit.price && `valor: ${unit.price}`
+          ].filter(Boolean).join(' | '))
+      }] : []),
+      ...((ai.technicalAppendix || []).filter(isSubstantialSection).map((section) => ({
           ...section,
           title: section.title.startsWith('Anexo') ? section.title : `Anexo Técnico - ${section.title}`
       })))
-  ];
+  ].slice(0, 6);
 
   previewSections.forEach((section) => {
       let sectionTitleAdded = false;

@@ -4,10 +4,10 @@ import { AIRealEstateContent, PDFSection, PrintableImage, PropertyData } from '.
 const PAGE = {
   width: 210,
   height: 297,
-  marginX: 16,
+  marginX: 15,
   top: 14,
-  bottom: 40,
-  footerH: 32
+  bottom: 34,
+  footerH: 26
 };
 
 const colors = {
@@ -57,6 +57,39 @@ const imageSize = (src: string): Promise<{ width: number; height: number }> => n
   img.onerror = reject;
   img.src = src;
 });
+
+const isSubstantialSection = (section: PDFSection) => {
+  const content = (section.content || []).map(stripUnsupported).filter(Boolean);
+  const charCount = content.join(' ').length;
+  return content.length > 6 || charCount > 700;
+};
+
+const mergeCompactAppendix = (ai: AIRealEstateContent, data: PropertyData): PDFSection[] => {
+  const sections = [...(ai.sections || [])];
+  const compactAppendix = (ai.technicalAppendix || []).filter((section) => !isSubstantialSection(section));
+
+  compactAppendix.forEach((section) => {
+    sections.push({
+      ...section,
+      content: (section.content || []).slice(0, 4)
+    });
+  });
+
+  if ((data.units || []).length > 0) {
+    sections.push({
+      title: 'Unidades e condições',
+      isList: true,
+      content: (data.units || []).slice(0, 4).map((unit) => [
+        unit.unit,
+        unit.area && `área: ${unit.area}`,
+        unit.status && `status: ${unit.status}`,
+        unit.price && `valor: ${unit.price}`
+      ].filter(Boolean).join(' | '))
+    });
+  }
+
+  return sections.slice(0, 6);
+};
 
 class PdfWriter {
   private doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -111,18 +144,18 @@ class PdfWriter {
 
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(21);
-    this.writeWrapped(title.toUpperCase(), PAGE.marginX, this.y + 8, 118, 8);
+    this.doc.setFontSize(18);
+    this.writeWrapped(title.toUpperCase(), PAGE.marginX, this.y + 7, 116, 7);
 
     this.doc.setTextColor(colors.amberDark);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(11);
-    this.writeWrapped(headline.toUpperCase(), PAGE.marginX, this.y + 2, 118, 5);
+    this.doc.setFontSize(9);
+    this.writeWrapped(headline.toUpperCase(), PAGE.marginX, this.y + 1, 118, 4);
 
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(16);
-    this.doc.text(price, PAGE.width - PAGE.marginX, 28, { align: 'right', maxWidth: 62 });
+    this.doc.setFontSize(12);
+    this.doc.text(price, PAGE.width - PAGE.marginX, 28, { align: 'right', maxWidth: 60 });
 
     if (location) {
       this.doc.setFillColor(colors.amber);
@@ -135,7 +168,7 @@ class PdfWriter {
     this.y = 64;
     this.highlights(ai.coverHighlights || []);
 
-    (ai.sections || []).slice(0, 4).forEach((section) => this.section(section));
+    mergeCompactAppendix(ai, this.data).forEach((section) => this.section(section, { maxItems: 5 }));
     this.footer();
   }
 
@@ -158,28 +191,28 @@ class PdfWriter {
       const y = this.y + 9 + Math.floor(index / 2) * 12;
       this.doc.setTextColor(colors.amberDark);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(12);
+      this.doc.setFontSize(10);
       this.doc.text(stripUnsupported(item).toUpperCase(), x, y, { maxWidth: 72 });
     });
 
     this.y += 38;
   }
 
-  section(section: PDFSection) {
+  section(section: PDFSection, options: { maxItems?: number } = {}) {
     const title = stripUnsupported(section.title);
-    const content = (section.content || []).map(stripUnsupported).filter(Boolean);
+    const content = (section.content || []).map(stripUnsupported).filter(Boolean).slice(0, options.maxItems);
     if (!title || content.length === 0) return;
 
     const titleHeight = 8;
     this.ensure(titleHeight + 10, title);
-    this.sectionHeading(title, 13);
+    this.sectionHeading(title, 11);
 
     content.forEach((item) => {
       const maxWidth = PAGE.width - PAGE.marginX * 2 - (section.isList ? 6 : 0);
       this.doc.setFont('helvetica', 'normal');
-      this.doc.setFontSize(section.isList ? 9.2 : 9.6);
+      this.doc.setFontSize(section.isList ? 7.8 : 8.2);
       const lines = this.doc.splitTextToSize(item, maxWidth);
-      const height = lines.length * 4.6 + (section.isList ? 1.5 : 3);
+      const height = lines.length * 3.8 + (section.isList ? 1 : 2);
       this.ensure(height + 2, title);
       this.doc.setTextColor(colors.muted);
 
@@ -223,7 +256,7 @@ class PdfWriter {
 
     if (this.logoData) {
       try {
-        this.doc.addImage(this.logoData, imageFormat(this.logoData), PAGE.marginX, PAGE.height - 29, 22, 22);
+        this.doc.addImage(this.logoData, imageFormat(this.logoData), PAGE.marginX, PAGE.height - 23, 16, 16);
       } catch {
         // Logo is optional for generation.
       }
@@ -231,20 +264,20 @@ class PdfWriter {
 
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(7);
-    this.doc.text('ENTRE EM CONTATO E AGENDE SUA VISITA', PAGE.width / 2, PAGE.height - 25, { align: 'center' });
-    this.doc.setFontSize(13);
-    this.doc.text('MARCELO DOS ANJOS', PAGE.width / 2, PAGE.height - 18, { align: 'center' });
-    this.doc.setFontSize(7);
-    this.doc.text('CORRETOR DE IMOVEIS | CRECI 1089', PAGE.width / 2, PAGE.height - 13, { align: 'center' });
-    this.doc.setFontSize(8);
-    this.doc.text('marcelodosanjosimoveis@hotmail.com  |  www.anjosimoveis.net', PAGE.width / 2, PAGE.height - 7, { align: 'center' });
+    this.doc.setFontSize(5.8);
+    this.doc.text('ENTRE EM CONTATO E AGENDE SUA VISITA', PAGE.width / 2, PAGE.height - 21, { align: 'center' });
+    this.doc.setFontSize(10);
+    this.doc.text('MARCELO DOS ANJOS', PAGE.width / 2, PAGE.height - 15.5, { align: 'center' });
+    this.doc.setFontSize(5.8);
+    this.doc.text('CORRETOR DE IMOVEIS | CRECI 1089', PAGE.width / 2, PAGE.height - 11, { align: 'center' });
+    this.doc.setFontSize(6.5);
+    this.doc.text('marcelodosanjosimoveis@hotmail.com  |  www.anjosimoveis.net', PAGE.width / 2, PAGE.height - 6, { align: 'center' });
 
-    this.doc.setFontSize(8);
-    this.doc.text('MAIS INFORMACOES E VENDAS:', PAGE.width - PAGE.marginX, PAGE.height - 22, { align: 'right' });
-    this.doc.setFontSize(12);
-    this.doc.text('(82) 9 9901-8701', PAGE.width - PAGE.marginX, PAGE.height - 15, { align: 'right' });
-    this.doc.text('(82) 9 8879-3479', PAGE.width - PAGE.marginX, PAGE.height - 8, { align: 'right' });
+    this.doc.setFontSize(6.5);
+    this.doc.text('MAIS INFORMACOES E VENDAS:', PAGE.width - PAGE.marginX, PAGE.height - 19, { align: 'right' });
+    this.doc.setFontSize(9.5);
+    this.doc.text('(82) 9 9901-8701', PAGE.width - PAGE.marginX, PAGE.height - 12.5, { align: 'right' });
+    this.doc.text('(82) 9 8879-3479', PAGE.width - PAGE.marginX, PAGE.height - 6.5, { align: 'right' });
 
     this.doc.setFontSize(6);
     this.doc.text(`Pagina ${this.pageNum}`, PAGE.width / 2, PAGE.height - 2.5, { align: 'center' });
@@ -252,12 +285,11 @@ class PdfWriter {
 }
 
 const addImagePage = async (doc: jsPDF, image: PrintableImage, pageNum: number, logoData: string | null) => {
-  const landscape = !image.isPortrait;
-  doc.addPage('a4', landscape ? 'l' : 'p');
+  doc.addPage('a4', 'p');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const footerH = 28;
-  const margin = 12;
+  const footerH = 26;
+  const margin = 10;
   const boxW = pageW - margin * 2;
   const boxH = pageH - footerH - margin * 2;
   const size = await imageSize(image.url);
@@ -272,16 +304,16 @@ const addImagePage = async (doc: jsPDF, image: PrintableImage, pageNum: number, 
   doc.rect(0, pageH - footerH, pageW, footerH, 'F');
   if (logoData) {
     try {
-      doc.addImage(logoData, imageFormat(logoData), margin, pageH - 24, 18, 18);
+      doc.addImage(logoData, imageFormat(logoData), margin, pageH - 22, 15, 15);
     } catch {
       // optional
     }
   }
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.setTextColor(colors.ink);
   doc.text('MARCELO DOS ANJOS | CRECI 1089', pageW / 2, pageH - 17, { align: 'center' });
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.text('(82) 9 9901-8701  |  (82) 9 8879-3479', pageW / 2, pageH - 10, { align: 'center' });
   doc.setFontSize(6);
   doc.text(`Pagina ${pageNum}`, pageW / 2, pageH - 3, { align: 'center' });
@@ -305,20 +337,20 @@ export const generatePropertyPdf = async (
   const writer = new PdfWriter(data, logoData);
   writer.cover(ai);
 
-  const technical = ai.technicalAppendix || [];
+  const technical = (ai.technicalAppendix || []).filter(isSubstantialSection);
   if (technical.length > 0) {
     writer.startTextPage('Ficha tecnica completa');
-    technical.forEach((section) => writer.section(section));
+    technical.forEach((section) => writer.section(section, { maxItems: 14 }));
     writer.finishTextPage();
   }
 
   const units = data.units || [];
-  if (units.length > 0) {
+  if (units.length > 4) {
     writer.startTextPage('Unidades e condicoes');
     writer.section({
       title: 'Unidades disponíveis',
       isList: true,
-      content: units.map((unit) => [
+      content: units.slice(4).map((unit) => [
         unit.unit,
         unit.floor && `andar: ${unit.floor}`,
         unit.view && `vista: ${unit.view}`,
@@ -326,7 +358,7 @@ export const generatePropertyPdf = async (
         unit.status && `status: ${unit.status}`,
         unit.price && `valor: ${unit.price}`
       ].filter(Boolean).join(' | '))
-    });
+    }, { maxItems: 18 });
     writer.finishTextPage();
   }
 
