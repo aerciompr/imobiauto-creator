@@ -24,9 +24,10 @@ O Dockerfile já faz:
 
 1. instala dependências;
 2. gera `npm run build`;
-3. inicia o servidor Node com `npm start`;
-4. serve o frontend em `dist`;
-5. expõe a aplicação na porta `80`.
+3. instala Chromium no container para geração fiel de PDF A4;
+4. inicia o servidor Node com `npm start`;
+5. serve o frontend em `dist`;
+6. expõe a aplicação na porta `80`.
 
 ## Variáveis de ambiente
 

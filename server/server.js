@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { existsSync, createReadStream, readFileSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import puppeteer from "puppeteer-core";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const rootDir = resolve(__dirname, "..");
@@ -132,6 +133,89 @@ const readJSONBody = async (req) => {
   for await (const chunk of req) chunks.push(chunk);
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
+};
+
+const sendBuffer = (res, status, buffer, contentType, fileName) => {
+  res.writeHead(status, {
+    "Content-Type": contentType,
+    "Content-Length": buffer.length,
+    ...(fileName ? { "Content-Disposition": `attachment; filename="${fileName}"` } : {})
+  });
+  res.end(buffer);
+};
+
+const safeFileName = (name) => String(name || "Ficha_Imovel")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-zA-Z0-9_-]+/g, "_")
+  .replace(/^_+|_+$/g, "")
+  .slice(0, 48) || "Ficha_Imovel";
+
+const buildPDFHTML = (bodyHTML) => `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#0f172a', secondary: '#334155', accent: '#3b82f6' },
+          screens: { print: { raw: 'print' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700;900&display=swap');
+    @page { size: A4 portrait; margin: 0; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+    html, body { margin: 0 !important; padding: 0 !important; width: 210mm; background: white !important; font-family: Inter, Arial, sans-serif; }
+    .pdf-page {
+      width: 210mm !important;
+      min-width: 210mm !important;
+      max-width: 210mm !important;
+      height: 297mm !important;
+      min-height: 297mm !important;
+      max-height: 297mm !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      break-after: page;
+      page-break-after: always;
+      overflow: hidden !important;
+    }
+    .pdf-page:last-child { break-after: auto; page-break-after: auto; }
+  </style>
+</head>
+<body>${bodyHTML}</body>
+</html>`;
+
+const renderPDF = async (html, fileName) => {
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser";
+  const browser = await puppeteer.launch({
+    executablePath,
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+    await page.setContent(buildPDFHTML(html), { waitUntil: "networkidle0", timeout: 60000 });
+    await page.evaluate(() => document.fonts?.ready);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const buffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      displayHeaderFooter: false
+    });
+    return { buffer, fileName: `${safeFileName(fileName)}.pdf` };
+  } finally {
+    await browser.close();
+  }
 };
 
 const requireOpenAI = () => {
@@ -373,6 +457,18 @@ Não descreva imagens quando não houver texto visível. Separe cada página com
   return sendJSON(res, 404, { error: "Rota de OpenAI não encontrada." });
 };
 
+const handlePDFRoute = async (req, res, pathname) => {
+  if (pathname !== "/api/pdf/render") return sendJSON(res, 404, { error: "Rota de PDF não encontrada." });
+  if (req.method !== "POST") return sendJSON(res, 405, { error: "Método não permitido." });
+
+  const body = await readJSONBody(req);
+  const html = String(body.html || "").trim();
+  if (!html || !html.includes("pdf-page")) return sendJSON(res, 400, { error: "HTML do PDF inválido." });
+
+  const { buffer, fileName } = await renderPDF(html, body.fileName || "Ficha_Imovel");
+  return sendBuffer(res, 200, buffer, "application/pdf", fileName);
+};
+
 const serveStatic = async (req, res, pathname) => {
   const requestedPath = pathname === "/" ? "/index.html" : pathname;
   const targetPath = normalize(join(distDir, requestedPath));
@@ -398,6 +494,7 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
     if (url.pathname === "/health") return sendJSON(res, 200, { ok: true });
+    if (url.pathname.startsWith("/api/pdf/")) return await handlePDFRoute(req, res, url.pathname);
     if (url.pathname.startsWith("/api/openai/") || url.pathname.startsWith("/api/gemini/")) {
       return await handleOpenAIRoute(req, res, url.pathname);
     }

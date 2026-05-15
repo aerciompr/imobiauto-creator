@@ -26,63 +26,101 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
     window.print();
   };
 
+  const safeTitle = () => data.title ? data.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) : 'Ficha_Imovel';
+
+  const downloadBlob = async (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const prepareCaptureContainer = async () => {
+    const printContainer = document.querySelector('.pdf-capture-container') as HTMLElement;
+    if (!printContainer) return null;
+
+    printContainer.classList.remove('hidden');
+    printContainer.classList.add('block');
+    printContainer.style.position = 'absolute';
+    printContainer.style.left = '-10000px';
+    printContainer.style.top = '0';
+    printContainer.style.width = '210mm';
+    printContainer.style.background = '#ffffff';
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return printContainer;
+  };
+
+  const cleanupCaptureContainer = (printContainer: HTMLElement | null) => {
+    if (!printContainer) return;
+    printContainer.classList.add('hidden');
+    printContainer.classList.remove('block');
+    printContainer.removeAttribute('style');
+  };
+
+  const handleServerDownload = async (printContainer: HTMLElement) => {
+    const response = await fetch('/api/pdf/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        html: printContainer.innerHTML,
+        fileName: safeTitle()
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Falha ao gerar PDF no servidor.');
+    }
+
+    const blob = await response.blob();
+    await downloadBlob(blob, `${safeTitle()}.pdf`);
+  };
+
+  const handleCanvasFallbackDownload = async (printContainer: HTMLElement) => {
+    const pages = Array.from(printContainer.querySelectorAll('.pdf-page')) as HTMLElement[];
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+    for (let i = 0; i < pages.length; i++) {
+      const pageEl = pages[i];
+      if (i > 0) pdf.addPage('a4', 'p');
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.96);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+    }
+
+    pdf.save(`${safeTitle()}.pdf`);
+  };
+
   const handleDownload = async () => {
     setIsGenerating(true);
+    let printContainer: HTMLElement | null = null;
     try {
-        const printContainer = document.querySelector('.pdf-capture-container') as HTMLElement;
+        printContainer = await prepareCaptureContainer();
         if (!printContainer) return;
-
-        printContainer.classList.remove('hidden');
-        printContainer.classList.add('block');
-        printContainer.style.position = 'absolute';
-        printContainer.style.left = '-10000px';
-        printContainer.style.top = '0';
-        printContainer.style.width = '210mm';
-        printContainer.style.background = '#ffffff';
-
-        await new Promise((resolve) => setTimeout(resolve, 250));
-
-        const pages = Array.from(printContainer.querySelectorAll('.pdf-page')) as HTMLElement[];
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4'
-        });
-
-        for (let i = 0; i < pages.length; i++) {
-            const pageEl = pages[i];
-            if (i > 0) pdf.addPage('a4', 'p');
-
-            const canvas = await html2canvas(pageEl, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.96);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        try {
+          await handleServerDownload(printContainer);
+        } catch (serverError) {
+          console.warn('Server PDF failed, using canvas fallback.', serverError);
+          await handleCanvasFallbackDownload(printContainer);
         }
-
-        printContainer.classList.add('hidden');
-        printContainer.classList.remove('block');
-        printContainer.removeAttribute('style');
-
-        const safeTitle = data.title ? data.title.replace(/[^a-zA-Z0-9]/g, '_') : 'Ficha_Imovel';
-        pdf.save(`${safeTitle.substring(0, 30)}.pdf`);
     } catch (error) {
         console.error("Error generating PDF", error);
         alert("Ocorreu um erro ao gerar o PDF. Tente imprimir a tela.");
-        const printContainer = document.querySelector('.pdf-capture-container') as HTMLElement;
-        if (printContainer) {
-            printContainer.classList.add('hidden');
-            printContainer.classList.remove('block');
-            printContainer.removeAttribute('style');
-        }
     } finally {
+        cleanupCaptureContainer(printContainer);
         setIsGenerating(false);
     }
   };
