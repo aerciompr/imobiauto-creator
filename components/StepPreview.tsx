@@ -63,11 +63,31 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
   };
 
   const handleServerDownload = async (printContainer: HTMLElement) => {
+    const inlineStyles = (source: HTMLElement, target: HTMLElement) => {
+      const computed = window.getComputedStyle(source);
+      const cssText = Array.from(computed)
+        .map((property) => `${property}:${computed.getPropertyValue(property)};`)
+        .join('');
+      target.setAttribute('style', cssText);
+
+      Array.from(source.children).forEach((sourceChild, index) => {
+        inlineStyles(sourceChild as HTMLElement, target.children[index] as HTMLElement);
+      });
+    };
+
+    const html = Array.from(printContainer.querySelectorAll('.pdf-page'))
+      .map((page) => {
+        const clone = page.cloneNode(true) as HTMLElement;
+        inlineStyles(page as HTMLElement, clone);
+        return clone.outerHTML;
+      })
+      .join('');
+
     const response = await fetch('/api/pdf/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        html: printContainer.innerHTML,
+        html,
         fileName: safeTitle()
       })
     });
@@ -114,7 +134,7 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
           await handleServerDownload(printContainer);
         } catch (serverError) {
           console.warn('Server PDF failed, using canvas fallback.', serverError);
-          await handleCanvasFallbackDownload(printContainer);
+          throw serverError;
         }
     } catch (error) {
         console.error("Error generating PDF", error);

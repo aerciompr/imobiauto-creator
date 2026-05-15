@@ -156,19 +156,7 @@ const buildPDFHTML = (bodyHTML) => `<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: { primary: '#0f172a', secondary: '#334155', accent: '#3b82f6' },
-          screens: { print: { raw: 'print' } }
-        }
-      }
-    }
-  </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700;900&display=swap');
     @page { size: A4 portrait; margin: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
     html, body { margin: 0 !important; padding: 0 !important; width: 210mm; background: white !important; font-family: Inter, Arial, sans-serif; }
@@ -196,15 +184,16 @@ const renderPDF = async (html, fileName) => {
   const browser = await puppeteer.launch({
     executablePath,
     headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+    timeout: 0,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
   });
 
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-    await page.setContent(buildPDFHTML(html), { waitUntil: "networkidle0", timeout: 60000 });
+    await page.setContent(buildPDFHTML(html), { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.evaluate(() => document.fonts?.ready);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     const buffer = await page.pdf({
       format: "A4",
       printBackground: true,
