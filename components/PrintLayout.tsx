@@ -94,17 +94,6 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
     ? ai.coverHighlights.slice(0, 4) 
     : ["Localização Privilegiada", "Acabamento de Alto Padrão", "Documentação Regularizada", "Excelente Oportunidade"];
 
-  // --- SMART PAGINATION LOGIC FOR TEXT ---
-  // We need to split sections and their content across pages
-  const textPages: { title: string; content: string[]; isList: boolean }[][] = [];
-  let currentPageSections: { title: string; content: string[]; isList: boolean }[] = [];
-  let currentSpaceUsed = 0;
-  
-  // Use a more aggressive estimate for available space to maximize first page
-  // With 2 columns, we have roughly double the units. 1 unit = roughly 1 line
-  const PAGE_1_MAX_UNITS = 55; // Keep commercial content on one page when compact
-  const PAGE_N_MAX_UNITS = 65; // Reduced from 85
-
   const isSubstantialSection = (section: { content: string[] }) => {
       const content = section.content || [];
       return content.length > 6 || content.join(' ').length > 700;
@@ -136,62 +125,16 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
       content: section.content.slice(0, section.isList ? 8 : 3)
   }));
 
-  previewSections.forEach((section) => {
-      let sectionTitleAdded = false;
-      let currentSectionContent: string[] = [];
-      
-      const addSectionToPage = () => {
-          if (currentSectionContent.length > 0) {
-              currentPageSections.push({
-                  title: section.title, // Removed (Continuação) or (Cont.) logic to keep it looking clean
-                  content: currentSectionContent,
-                  isList: section.isList || false
-              });
-              sectionTitleAdded = true;
-              currentSectionContent = [];
-          }
-      };
-
-      const titleUnits = 2; // Title takes about 2 lines of space per column
-      
-      const maxAllowed = textPages.length === 0 ? PAGE_1_MAX_UNITS : PAGE_N_MAX_UNITS;
-      
-      if (currentSpaceUsed + titleUnits > maxAllowed && currentPageSections.length > 0) {
-          textPages.push(currentPageSections);
-          currentPageSections = [];
-          currentSpaceUsed = 0;
-      }
-      
-      currentSpaceUsed += titleUnits;
-
-      section.content.forEach((item) => {
-          // Estimate lines this item will take.
-          // In a 2-column layout each line is about 45-50 characters wide.
-          const lines = Math.ceil(item.length / 50); 
-          const itemUnits = section.isList ? lines : lines + 0.5; // Less spacing for paragraphs
-          
-          const currentMaxAllowed = textPages.length === 0 ? PAGE_1_MAX_UNITS : PAGE_N_MAX_UNITS;
-
-          if (currentSpaceUsed + itemUnits > currentMaxAllowed && (currentPageSections.length > 0 || currentSectionContent.length > 0)) {
-              addSectionToPage();
-              if (currentPageSections.length > 0) {
-                  textPages.push(currentPageSections);
-                  currentPageSections = [];
-              }
-              currentSpaceUsed = titleUnits; // Account for title on new page
-          }
-          
-          currentSectionContent.push(item);
-          currentSpaceUsed += itemUnits;
-      });
-      
-      addSectionToPage();
-      currentSpaceUsed += 1; // Less margin after section
-  });
-
-  if (currentPageSections.length > 0) {
-      textPages.push(currentPageSections);
-  }
+  const totalTextUnits = previewSections.reduce((sum, section) => {
+      const contentUnits = section.content.reduce((acc, item) => acc + Math.ceil(item.length / 58), 0);
+      return sum + 2 + contentUnits;
+  }, 0);
+  const density = totalTextUnits > 62 ? 'dense' : totalTextUnits > 48 ? 'medium' : 'normal';
+  const titleClass = density === 'dense' ? 'text-[17pt]' : density === 'medium' ? 'text-[19pt]' : 'text-[20pt]';
+  const sectionTitleClass = density === 'dense' ? 'text-[12px]' : 'text-[14px]';
+  const bodyClass = density === 'dense' ? 'text-[9px] leading-[1.35]' : density === 'medium' ? 'text-[10px] leading-[1.45]' : 'text-[11px] leading-relaxed';
+  const sectionGap = density === 'dense' ? 'mb-2' : 'mb-4';
+  const gridGap = density === 'dense' ? 'gap-x-4 gap-y-1' : 'gap-x-8 gap-y-3';
 
   // --- SMART PAGINATION LOGIC FOR IMAGES ---
   // ALWAYS 1 image per page to maintain original presentation format
@@ -203,21 +146,19 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   return (
     <div className="w-full flex flex-col items-center py-8 print:bg-white print:block print:p-0">
       
-      {/* ================= TEXT PAGES ================= */}
-      {textPages.map((pageSections, pIdx) => (
-        <A4Page key={`text-${pIdx}`} className="px-[15mm] pt-[10mm] pb-[40mm]">
+      {/* ================= SINGLE A4 TEXT PAGE ================= */}
+        <A4Page key="text-cover" className="px-[15mm] pt-[10mm] pb-[35mm]">
           {/* Barra superior amarela */}
           <div 
               className="absolute top-0 left-0 w-full h-4 bg-[#fbbf24] !bg-[#fbbf24]" 
               style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
           ></div>
 
-          {pIdx === 0 && (
-            <div className="mt-4 mb-6 border-b-2 border-[#fbbf24] pb-6">
+            <div className={`${density === 'dense' ? 'mt-3 mb-3 pb-4' : 'mt-4 mb-5 pb-5'} border-b-2 border-[#fbbf24]`}>
                  <div className="flex justify-between items-start mb-6 gap-6">
                      <div className="flex-1 pr-4">
-                        <h1 className="font-serif text-[20pt] font-black text-[#0f172a] uppercase leading-[1.15] mb-3 break-words">{ai.marketingTitle}</h1>
-                        <h2 className="text-[#d97706] text-sm font-bold leading-snug uppercase tracking-wide break-words">{ai.headline}</h2>
+                        <h1 className={`font-serif ${titleClass} font-black text-[#0f172a] uppercase leading-[1.12] mb-2 break-words`}>{ai.marketingTitle}</h1>
+                        <h2 className={`${density === 'dense' ? 'text-[10px]' : 'text-sm'} text-[#d97706] font-bold leading-snug uppercase tracking-wide break-words`}>{ai.headline}</h2>
                      </div>
                      <div className="flex-none w-2/5 text-right pt-1">
                         {(() => {
@@ -245,7 +186,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                  </div>
                  
                  {/* REFACTORED HIGHLIGHTS SECTION */}
-                 <div className="grid grid-cols-2 gap-x-6 gap-y-4 bg-slate-50 p-5 rounded-xl border-l-8 border-[#fbbf24]">
+                 <div className={`grid grid-cols-2 ${density === 'dense' ? 'gap-x-4 gap-y-2 p-3' : 'gap-x-6 gap-y-4 p-5'} bg-slate-50 rounded-xl border-l-8 border-[#fbbf24]`}>
                     {highlights.map((highlight, idx) => {
                         const firstSpaceIndex = highlight.indexOf(' ');
                         let first = highlight;
@@ -258,10 +199,10 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
 
                         return (
                             <div key={idx} className="flex flex-row items-baseline gap-2">
-                                <span className="font-serif font-black text-2xl text-[#d97706] tracking-tighter leading-none">
+                                <span className={`font-serif font-black ${density === 'dense' ? 'text-lg' : 'text-2xl'} text-[#d97706] tracking-tighter leading-none`}>
                                     {first}
                                 </span>
-                                <span className="text-xs text-slate-800 font-bold uppercase tracking-wide leading-tight">
+                                <span className={`${density === 'dense' ? 'text-[9px]' : 'text-xs'} text-slate-800 font-bold uppercase tracking-wide leading-tight`}>
                                     {rest}
                                 </span>
                             </div>
@@ -269,75 +210,37 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                     })}
                  </div>
             </div>
-          )}
 
-          <div className={`flex flex-row gap-8 items-start w-full ${pIdx > 0 ? 'mt-4' : ''}`}>
-              {/* Calculate columns locally for a stable browser preview */}
-              {(() => {
-                  const col1: typeof pageSections = [];
-                  const col2: typeof pageSections = [];
-                  let col1Units = 0;
-                  let col2Units = 0;
-
-                  pageSections.forEach(section => {
-                      const titleUnits = 2;
-                      const itemsUnits = section.content.reduce((acc, item) => {
-                          const lines = Math.ceil(item.length / 50);
-                          return acc + (section.isList ? lines : lines + 0.5);
-                      }, 0);
-                      const totalUnits = titleUnits + itemsUnits + 1;
-
-                      if (col1Units <= col2Units) {
-                          col1.push(section);
-                          col1Units += totalUnits;
-                      } else {
-                          col2.push(section);
-                          col2Units += totalUnits;
-                      }
-                  });
-
-                  const renderSection = (section: typeof pageSections[0], idx: number) => (
-                      <div key={idx} className="mb-6">
-                          <h3 className="font-serif text-lg font-bold text-[#0f172a] mb-2 flex items-center gap-2 uppercase border-b border-slate-200 pb-1">
-                              <span 
-                                  className="w-3 h-3 bg-[#fbbf24] !bg-[#fbbf24] inline-block"
-                                  style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
-                              ></span>
-                              {section.title}
-                          </h3>
-                          {section.isList ? (
-                              <ul className="space-y-1 mt-2">
-                                  {section.content.map((item, i) => (
-                                      <li key={i} className="flex items-start gap-2 text-[12px] text-slate-800 text-justify leading-relaxed font-medium">
-                                          <span className="text-[#d97706] font-bold">✓</span><span className="flex-1">{item}</span>
-                                      </li>
-                                  ))}
-                              </ul>
-                          ) : (
-                              <div className="space-y-3 mt-2">
-                                   {section.content.map((item, i) => (
-                                      <p key={i} className="text-[12px] text-slate-700 text-justify leading-relaxed indent-4">{item}</p>
-                                   ))}
-                              </div>
-                          )}
-                      </div>
-                  );
-
-                  return (
-                      <>
-                          <div className="w-1/2 flex flex-col">
-                              {col1.map((section, idx) => renderSection(section, idx))}
+          <div className={`grid grid-cols-2 ${gridGap} items-start w-full max-h-[150mm] overflow-hidden`}>
+              {previewSections.map((section, idx) => (
+                  <div key={idx} className={sectionGap}>
+                      <h3 className={`font-serif ${sectionTitleClass} font-bold text-[#0f172a] mb-1.5 flex items-center gap-2 uppercase border-b border-slate-200 pb-1`}>
+                          <span 
+                              className="w-2.5 h-2.5 bg-[#fbbf24] !bg-[#fbbf24] inline-block shrink-0"
+                              style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                          ></span>
+                          {section.title}
+                      </h3>
+                      {section.isList ? (
+                          <ul className={`${density === 'dense' ? 'space-y-0.5' : 'space-y-1'} mt-1`}>
+                              {section.content.map((item, i) => (
+                                  <li key={i} className={`flex items-start gap-2 ${bodyClass} text-slate-800 text-justify font-medium`}>
+                                      <span className="text-[#d97706] font-bold shrink-0">✓</span><span className="flex-1">{item}</span>
+                                  </li>
+                              ))}
+                          </ul>
+                      ) : (
+                          <div className={`${density === 'dense' ? 'space-y-1' : 'space-y-2'} mt-1`}>
+                               {section.content.map((item, i) => (
+                                  <p key={i} className={`${bodyClass} text-slate-700 text-justify indent-3`}>{item}</p>
+                               ))}
                           </div>
-                          <div className="w-1/2 flex flex-col">
-                              {col2.map((section, idx) => renderSection(section, idx))}
-                          </div>
-                      </>
-                  );
-              })()}
+                      )}
+                  </div>
+              ))}
           </div>
-          <Footer pageNum={pIdx + 1} logoUrl={logoUrl} />
+          <Footer pageNum={1} logoUrl={logoUrl} />
         </A4Page>
-      ))}
 
       {/* ================= GALLERY PAGES ================= */}
       {galleryPages.map((pageImages, pIdx) => {
@@ -355,7 +258,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                 </div>
              </div>
 
-             <Footer pageNum={textPages.length + pIdx + 1} logoUrl={logoUrl} />
+             <Footer pageNum={pIdx + 2} logoUrl={logoUrl} />
          </A4Page>
          );
       })}

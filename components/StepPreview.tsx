@@ -29,7 +29,7 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-        const printContainer = document.querySelector('.print-only-container') as HTMLElement;
+        const printContainer = document.querySelector('.pdf-capture-container') as HTMLElement;
         if (!printContainer) return;
 
         printContainer.classList.remove('hidden');
@@ -37,7 +37,8 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
         printContainer.style.position = 'absolute';
         printContainer.style.left = '-10000px';
         printContainer.style.top = '0';
-        printContainer.style.width = 'auto';
+        printContainer.style.width = '210mm';
+        printContainer.style.background = '#ffffff';
 
         await new Promise((resolve) => setTimeout(resolve, 250));
 
@@ -77,7 +78,7 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
     } catch (error) {
         console.error("Error generating PDF", error);
         alert("Ocorreu um erro ao gerar o PDF. Tente imprimir a tela.");
-        const printContainer = document.querySelector('.print-only-container') as HTMLElement;
+        const printContainer = document.querySelector('.pdf-capture-container') as HTMLElement;
         if (printContainer) {
             printContainer.classList.add('hidden');
             printContainer.classList.remove('block');
@@ -96,6 +97,10 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
         Ela está fora de qualquer modal/scroll, garantindo impressão perfeita.
       */}
       <div className="hidden print:block print:absolute print:top-0 print:left-0 print:w-full print:bg-white print:z-[9999] print-only-container">
+          <PrintLayout data={data} images={processedImages} logoUrl={logoUrl} />
+      </div>
+
+      <div className="hidden pdf-capture-container">
           <PrintLayout data={data} images={processedImages} logoUrl={logoUrl} />
       </div>
 
