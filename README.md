@@ -49,6 +49,18 @@ docker compose up --build
 
 O container lê `OPENAI_API_KEY` ou `API_KEY` do ambiente e expõe a aplicação na porta `8080`.
 
+## Deploy no Easypanel
+
+Use o Dockerfile deste repositório, configure a porta `8080` e cadastre as variáveis:
+
+```env
+OPENAI_API_KEY=sua_chave_openai
+PORT=8080
+NODE_ENV=production
+```
+
+Veja o passo a passo em `DEPLOY_EASYPANEL.md`.
+
 ## Build de produção
 
    ```bash
