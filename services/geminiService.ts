@@ -27,9 +27,22 @@ const postJSON = async <T>(path: string, body: unknown): Promise<T> => {
   return payload as T;
 };
 
+const normalizePrice = (price: string, data: any): string => {
+  const clean = sanitizeForPDF(price);
+  const unitCount = Array.isArray(data.units) ? data.units.length : 0;
+  const text = `${data.title || ""} ${data.features || ""} ${data.description || ""}`.toLowerCase();
+  const looksLikeSingleProperty = unitCount <= 1 && /\b(casa|mans[aã]o|cobertura|apartamento|im[oó]vel)\b/.test(text);
+
+  if (looksLikeSingleProperty && /^a\s*partir\s*de\s*:?\s*/i.test(clean)) {
+    return clean.replace(/^a\s*partir\s*de\s*:?\s*/i, "").trim();
+  }
+
+  return clean;
+};
+
 const normalizePropertyData = (data: any): PropertyData => ({
   title: sanitizeForPDF(data.title),
-  price: sanitizeForPDF(data.price),
+  price: normalizePrice(data.price, data),
   location: sanitizeForPDF(data.location),
   features: sanitizeForPDF(data.features),
   description: sanitizeForPDF(data.description),

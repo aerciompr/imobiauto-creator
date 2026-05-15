@@ -58,6 +58,16 @@ const imageSize = (src: string): Promise<{ width: number; height: number }> => n
   img.src = src;
 });
 
+const classifyPrice = (price: string) => {
+  const clean = stripUnsupported(price);
+  if (!clean) return { label: '', value: 'Sob consulta' };
+  const isStarting = /(^|\b)(a\s*partir\s*de|apartir\s*de|desde)\b/i.test(clean);
+  return {
+    label: isStarting ? 'A PARTIR DE:' : '',
+    value: clean.replace(/^(a\s*partir\s*de|apartir\s*de|desde)\s*:?\s*/i, '').trim() || clean
+  };
+};
+
 const isSubstantialSection = (section: PDFSection) => {
   const content = (section.content || []).map(stripUnsupported).filter(Boolean);
   const charCount = content.join(' ').length;
@@ -137,7 +147,7 @@ class PdfWriter {
 
   cover(ai: AIRealEstateContent) {
     this.headerBar();
-    const price = stripUnsupported(this.data.price || 'Sob consulta');
+    const price = classifyPrice(this.data.price || 'Sob consulta');
     const location = stripUnsupported(this.data.location || ai.locationHighlight || '');
     const title = stripUnsupported(ai.marketingTitle || this.data.title || 'Ficha do Imovel');
     const headline = stripUnsupported(ai.headline || 'Oportunidade imobiliaria');
@@ -154,13 +164,15 @@ class PdfWriter {
 
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(7.5);
-    this.doc.setTextColor('#64748b');
-    this.doc.text('A PARTIR DE:', PAGE.width - PAGE.marginX, 24, { align: 'right' });
+    if (price.label) {
+      this.doc.setFontSize(7.5);
+      this.doc.setTextColor('#64748b');
+      this.doc.text(price.label, PAGE.width - PAGE.marginX, 24, { align: 'right' });
+    }
     this.doc.setTextColor(colors.ink);
     this.doc.setFont('times', 'bold');
     this.doc.setFontSize(15);
-    this.doc.text(price, PAGE.width - PAGE.marginX, 34, { align: 'right', maxWidth: 60 });
+    this.doc.text(price.value, PAGE.width - PAGE.marginX, price.label ? 34 : 29, { align: 'right', maxWidth: 60 });
 
     if (location) {
       this.doc.setFillColor(colors.amber);

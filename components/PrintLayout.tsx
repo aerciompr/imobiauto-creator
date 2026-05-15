@@ -7,6 +7,19 @@ interface PrintLayoutProps {
   logoUrl: string | null;
 }
 
+const classifyPrice = (price: string) => {
+  const clean = (price || '').trim();
+  if (!clean) return { label: '', value: 'Sob Consulta' };
+  const isStarting = /(^|\b)(a\s*partir\s*de|apartir\s*de|desde)\b/i.test(clean);
+  const value = clean
+    .replace(/^(a\s*partir\s*de|apartir\s*de|desde)\s*:?\s*/i, '')
+    .trim();
+  return {
+    label: isStarting ? 'A partir de:' : '',
+    value: value || clean
+  };
+};
+
 // A4 Page Component
 const A4Page: React.FC<{ children: React.ReactNode; className?: string; landscape?: boolean }> = ({ children, className = "", landscape = false }) => (
   <div 
@@ -75,7 +88,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
     locationHighlight: data.location || ""
   };
 
-  const formattedPrice = data.price || "Sob Consulta";
+  const formattedPrice = classifyPrice(data.price || "Sob Consulta");
   
   const highlights = ai.coverHighlights && ai.coverHighlights.length > 0 
     ? ai.coverHighlights.slice(0, 4) 
@@ -208,18 +221,17 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                      </div>
                      <div className="flex-none w-2/5 text-right pt-1">
                         {(() => {
-                            const match = formattedPrice.match(/^(a\s*partir\s*de)\s*:?\s*(.*)$/i);
-                            if (match) {
+                            if (formattedPrice.label) {
                                 return (
                                     <div className="mb-4">
-                                        <div className="text-[12px] font-bold text-slate-500 uppercase tracking-widest leading-normal mb-1">A partir de:</div>
-                                        <div className="font-serif font-black text-2xl text-[#0f172a] leading-normal break-words">{match[2]}</div>
+                                        <div className="text-[12px] font-bold text-slate-500 uppercase tracking-widest leading-normal mb-1">{formattedPrice.label}</div>
+                                        <div className="font-serif font-black text-2xl text-[#0f172a] leading-normal break-words">{formattedPrice.value}</div>
                                     </div>
                                 );
                             }
                             return (
                                 <div className="mb-4 font-serif font-black text-2xl text-[#0f172a] leading-normal break-words">
-                                    {formattedPrice}
+                                    {formattedPrice.value}
                                 </div>
                             );
                         })()}

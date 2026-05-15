@@ -233,7 +233,10 @@ const handleOpenAIRoute = async (req, res, pathname) => {
 Analise este texto bruto e extraia os dados do imóvel.
 
 REGRAS:
-1. Se houver múltiplos preços, use o menor valor no campo price como "A PARTIR DE R$ [valor]".
+1. Preço inteligente:
+   - Se for casa, cobertura, apartamento específico, unidade única ou imóvel usado com um único valor, use o campo price apenas como "R$ [valor]". Nunca coloque "A PARTIR DE".
+   - Use "A PARTIR DE R$ [valor]" somente para lançamento/empreendimento/tabela com múltiplas unidades ou quando o texto disser explicitamente "a partir de".
+   - Se não houver preço, use "Sob consulta".
 2. Não crie tabela longa de preços soltos.
 3. Liste todas as tipologias/plantas, metragens e diferenciais.
 4. Preserve lazer, estrutura e informações técnicas, mas organize o excesso em aiContent.technicalAppendix.
@@ -273,6 +276,9 @@ ESTRUTURA:
 
 REGRAS:
 - marketingTitle até 70 caracteres.
+- marketingTitle deve ser natural, sem excesso de adjetivos, sem repetir condomínio/bairro se isso deixar o título longo.
+- Para casa/unidade única, prefira título no formato: "[Tipo] no [Condomínio/Bairro] com [principal diferencial]".
+- Para lançamento/empreendimento, prefira título no formato: "[Empreendimento] - [principal promessa/localização]".
 - headline até 100 caracteres.
 - coverHighlights com exatamente 4 itens de até 28 caracteres.
 - sections deve ser limpo e comercial, com até 1.250 caracteres somados.
