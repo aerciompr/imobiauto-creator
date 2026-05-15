@@ -24,7 +24,7 @@ const loadDotEnv = () => {
 
 loadDotEnv();
 
-const port = Number(process.env.PORT || 8080);
+const port = Number(process.env.PORT || 80);
 
 const OPENAI_TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || "gpt-4.1";
 const OPENAI_FAST_MODEL = process.env.OPENAI_FAST_MODEL || "gpt-4.1-mini";
@@ -406,6 +406,6 @@ if (!existsSync(join(distDir, "index.html"))) {
   console.warn("Aviso: dist/index.html não encontrado. Rode npm run build antes de npm start.");
 }
 
-server.listen(port, () => {
-  console.log(`ImobiAuto rodando em http://localhost:${port}`);
+server.listen(port, "0.0.0.0", () => {
+  console.log(`ImobiAuto rodando em http://0.0.0.0:${port}`);
 });

@@ -8,6 +8,7 @@ services:
     container_name: app-imoveis
     restart: always
     ports:
-      - "8080:8080"
+      - "8080:80"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-${API_KEY}}
+      - PORT=80

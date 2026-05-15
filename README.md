@@ -30,7 +30,7 @@ Automatize a criação de PDFs imobiliários: Aplique logomarcas em fotos e gere
    npm start
    ```
 
-   Acesse `http://localhost:8080`.
+   Acesse `http://localhost:80`.
 
 ## Desenvolvimento frontend
 
@@ -47,15 +47,15 @@ As chamadas de IA usam `/api/openai/*` pelo servidor Node, então para testar IA
 docker compose up --build
 ```
 
-O container lê `OPENAI_API_KEY` ou `API_KEY` do ambiente e expõe a aplicação na porta `8080`.
+O container lê `OPENAI_API_KEY` ou `API_KEY` do ambiente e expõe a aplicação na porta `80`.
 
 ## Deploy no Easypanel
 
-Use o Dockerfile deste repositório, configure a porta `8080` e cadastre as variáveis:
+Use o Dockerfile deste repositório, configure a porta `80` e cadastre as variáveis:
 
 ```env
 OPENAI_API_KEY=sua_chave_openai
-PORT=8080
+PORT=80
 NODE_ENV=production
 ```
 

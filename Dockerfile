@@ -12,5 +12,6 @@ COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund --loglevel=error
 COPY --from=builder /app/dist ./dist
 COPY server ./server
-EXPOSE 8080
+ENV PORT=80
+EXPOSE 80
 CMD ["npm", "start"]

@@ -16,7 +16,7 @@ No Easypanel, crie um app usando:
 Source: GitHub Repository
 Build: Dockerfile
 Branch: main
-Port: 8080
+Port: 80
 Healthcheck path: /health
 ```
 
@@ -26,7 +26,7 @@ O Dockerfile já faz:
 2. gera `npm run build`;
 3. inicia o servidor Node com `npm start`;
 4. serve o frontend em `dist`;
-5. expõe a aplicação na porta `8080`.
+5. expõe a aplicação na porta `80`.
 
 ## Variáveis de ambiente
 
@@ -34,7 +34,7 @@ Cadastre estas variáveis no Easypanel:
 
 ```env
 OPENAI_API_KEY=cole_sua_chave_openai_aqui
-PORT=8080
+PORT=80
 NODE_ENV=production
 ```
 
