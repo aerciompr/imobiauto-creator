@@ -20,16 +20,13 @@ const classifyPrice = (price: string) => {
   };
 };
 
-// A4 Page Component
-const A4Page: React.FC<{ children: React.ReactNode; className?: string; landscape?: boolean }> = ({ children, className = "", landscape = false }) => (
+// A4 portrait page component
+const A4Page: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
   <div 
       className={`
           pdf-page
           relative bg-white overflow-hidden mx-auto my-8 shadow-2xl 
-          ${landscape 
-              ? 'w-[297mm] h-[210mm] min-w-[297mm] min-h-[210mm] print:w-[297mm] print:h-[210mm] is-landscape' 
-              : 'w-[210mm] h-[297mm] min-w-[210mm] min-h-[297mm] print:w-[210mm] print:h-[297mm] is-portrait'
-          }
+          w-[210mm] h-[297mm] min-w-[210mm] min-h-[297mm] print:w-[210mm] print:h-[297mm] is-portrait
           print:shadow-none print:m-0 print:my-0 print:break-after-page
           ${className}
       `}
@@ -246,9 +243,9 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
       {galleryPages.map((pageImages, pIdx) => {
          const img = pageImages[0];
          return (
-         <A4Page key={pIdx} landscape={!img.isPortrait} className="p-[15mm] pt-[15mm]">
+         <A4Page key={pIdx} className="p-[12mm] pt-[12mm]">
              <div className="flex flex-col h-[calc(100%-35mm)] items-center justify-center -mt-4">
-                <div className={`relative w-full h-[95%] bg-white rounded-lg overflow-hidden flex items-center justify-center`}>
+                <div className="relative w-full h-full bg-white rounded-lg overflow-hidden flex items-center justify-center">
                     <img 
                         src={img.url} 
                         className="w-full h-full object-contain" 

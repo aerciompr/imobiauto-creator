@@ -43,17 +43,15 @@ const StepPreview: React.FC<StepPreviewProps> = ({ processedImages, logo, data, 
         await new Promise((resolve) => setTimeout(resolve, 250));
 
         const pages = Array.from(printContainer.querySelectorAll('.pdf-page')) as HTMLElement[];
-        const firstLandscape = pages[0]?.classList.contains('is-landscape') || false;
         const pdf = new jsPDF({
-            orientation: firstLandscape ? 'l' : 'p',
+            orientation: 'p',
             unit: 'mm',
             format: 'a4'
         });
 
         for (let i = 0; i < pages.length; i++) {
             const pageEl = pages[i];
-            const isLandscape = pageEl.classList.contains('is-landscape');
-            if (i > 0) pdf.addPage('a4', isLandscape ? 'l' : 'p');
+            if (i > 0) pdf.addPage('a4', 'p');
 
             const canvas = await html2canvas(pageEl, {
                 scale: 2,
