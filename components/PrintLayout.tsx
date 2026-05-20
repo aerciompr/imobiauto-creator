@@ -86,6 +86,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   };
 
   const formattedPrice = classifyPrice(data.price || "Sob Consulta");
+  const isPriceTable = Boolean(data.isPriceTable);
   
   const highlights = ai.coverHighlights && ai.coverHighlights.length > 0 
     ? ai.coverHighlights.slice(0, 4) 
@@ -97,7 +98,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
   };
 
   const compactUnits = (data.units || []).slice(0, 4);
-  const previewSections = [
+  const previewSections = isPriceTable ? [] : [
       ...(ai.sections || []),
       ...((ai.technicalAppendix || []).filter((section) => !isSubstantialSection(section)).map((section) => ({
           ...section,
@@ -151,11 +152,11 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
               style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
           ></div>
 
-            <div className={`${density === 'dense' ? 'mt-3 mb-3 pb-4' : 'mt-4 mb-5 pb-5'} border-b-2 border-[#fbbf24]`}>
+            <div className={`${isPriceTable ? 'mt-16 mb-4 pb-8' : density === 'dense' ? 'mt-3 mb-3 pb-4' : 'mt-4 mb-5 pb-5'} border-b-2 border-[#fbbf24]`}>
                  <div className="flex justify-between items-start mb-6 gap-6">
                      <div className="flex-1 pr-4">
                         <h1 className={`font-serif ${titleClass} font-black text-[#0f172a] uppercase leading-[1.12] mb-2 break-words`}>{ai.marketingTitle}</h1>
-                        <h2 className={`${density === 'dense' ? 'text-[10px]' : 'text-sm'} text-[#d97706] font-bold leading-snug uppercase tracking-wide break-words`}>{ai.headline}</h2>
+                        <h2 className={`${density === 'dense' ? 'text-[10px]' : 'text-sm'} text-[#d97706] font-bold leading-snug uppercase tracking-wide break-words`}>{isPriceTable ? (data.location || ai.headline) : ai.headline}</h2>
                      </div>
                      <div className="flex-none w-2/5 text-right pt-1">
                         {(() => {
@@ -182,8 +183,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                      </div>
                  </div>
                  
-                 {/* REFACTORED HIGHLIGHTS SECTION */}
-                 <div className={`grid grid-cols-2 ${density === 'dense' ? 'gap-x-4 gap-y-2 p-3' : 'gap-x-6 gap-y-4 p-5'} bg-slate-50 rounded-xl border-l-8 border-[#fbbf24]`}>
+                 {!isPriceTable && <div className={`grid grid-cols-2 ${density === 'dense' ? 'gap-x-4 gap-y-2 p-3' : 'gap-x-6 gap-y-4 p-5'} bg-slate-50 rounded-xl border-l-8 border-[#fbbf24]`}>
                     {highlights.map((highlight, idx) => {
                         const firstSpaceIndex = highlight.indexOf(' ');
                         let first = highlight;
@@ -205,10 +205,17 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                             </div>
                         );
                     })}
-                 </div>
+                 </div>}
             </div>
 
-          <div className={`grid grid-cols-2 ${gridGap} items-start w-full max-h-[150mm] overflow-hidden`}>
+          {isPriceTable && (
+              <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+                  <p className="text-sm font-bold uppercase tracking-widest text-slate-500">Tabela de valores</p>
+                  <p className="mt-3 text-lg font-bold text-slate-900">Páginas originais em anexo</p>
+              </div>
+          )}
+
+          {!isPriceTable && <div className={`grid grid-cols-2 ${gridGap} items-start w-full max-h-[150mm] overflow-hidden`}>
               {previewSections.map((section, idx) => (
                   <div key={idx} className={sectionGap}>
                       <h3 className={`font-serif ${sectionTitleClass} font-bold text-[#0f172a] mb-1.5 flex items-center gap-2 uppercase border-b border-slate-200 pb-1`}>
@@ -235,7 +242,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ data, images = [], logoUrl })
                       )}
                   </div>
               ))}
-          </div>
+          </div>}
           <Footer pageNum={1} logoUrl={logoUrl} />
         </A4Page>
 

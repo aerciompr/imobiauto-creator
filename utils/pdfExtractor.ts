@@ -416,7 +416,11 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
   if (looksLikePriceTable(fullText)) {
       return {
           text: `--- TABELA DE VALORES ---
-Material identificado como tabela de valores. Gere apenas uma capa curta com nome do empreendimento/imóvel, preço inicial se existir e uma observação: "Tabela completa em anexo". Não transcreva a tabela.`,
+Material identificado como tabela de valores. Extraia somente:
+1. título/nome do empreendimento;
+2. localização, se existir;
+3. menor valor encontrado.
+Não gere texto comercial. Não transcreva tabela. O PDF final deve conter apenas estes dados mínimos e as páginas originais em anexo.`,
           images: renderedPages
       };
   }

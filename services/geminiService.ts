@@ -46,6 +46,7 @@ const normalizePropertyData = (data: any): PropertyData => ({
   location: sanitizeForPDF(data.location),
   features: sanitizeForPDF(data.features),
   description: sanitizeForPDF(data.description),
+  isPriceTable: Boolean(data.isPriceTable),
   units: data.units?.map((u: any) => ({
     ...u,
     unit: sanitizeForPDF(u.unit),

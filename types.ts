@@ -39,6 +39,7 @@ export interface PropertyData {
   location: string;
   features: string;
   description: string;
+  isPriceTable?: boolean;
   aiContent?: AIRealEstateContent;
   units?: UnitData[];
 }
