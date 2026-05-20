@@ -306,6 +306,12 @@ const handleOpenAIRoute = async (req, res, pathname) => {
 Analise este texto bruto e extraia os dados do imóvel.
 
 REGRAS:
+0. Se o texto contiver "Material identificado como tabela de valores", gere apenas:
+   - title curto;
+   - price com menor valor se estiver claro, senão "Sob consulta";
+   - features: "Tabela completa em anexo";
+   - description curta, sem transcrever linhas da tabela;
+   - aiContent com 1 seção curta chamada "Tabela em anexo".
 1. Preço inteligente:
    - Se for casa, cobertura, apartamento específico, unidade única ou imóvel usado com um único valor, use o campo price apenas como "R$ [valor]". Nunca coloque "A PARTIR DE".
    - Use "A PARTIR DE R$ [valor]" somente para lançamento/empreendimento/tabela com múltiplas unidades ou quando o texto disser explicitamente "a partir de".
@@ -348,6 +354,7 @@ ESTRUTURA:
 5. technicalAppendix: detalhes técnicos longos, tabelas, muitas plantas ou listas extensas.
 
 REGRAS:
+- Se o input disser "Tabela completa em anexo", NÃO transcreva tabela. Faça só uma ficha curta.
 - marketingTitle até 70 caracteres.
 - marketingTitle deve ser natural, sem excesso de adjetivos, sem repetir condomínio/bairro se isso deixar o título longo.
 - Para casa/unidade única, prefira título no formato: "[Tipo] no [Condomínio/Bairro] com [principal diferencial]".

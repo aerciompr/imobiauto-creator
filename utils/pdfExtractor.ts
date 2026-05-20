@@ -10,6 +10,34 @@ export interface ExtractedPDFData {
   images: File[];
 }
 
+const pageToFile = async (page: any, pageNum: number): Promise<File | null> => {
+    try {
+        const viewport = page.getViewport({ scale: 1.8 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+        canvas.width = 0;
+        canvas.height = 0;
+        return blob ? new File([blob], `pdf_page_${pageNum}_anexo.jpg`, { type: 'image/jpeg' }) : null;
+    } catch (e) {
+        console.warn(`Falha ao renderizar página ${pageNum} como anexo:`, e);
+        return null;
+    }
+};
+
+const looksLikePriceTable = (text: string) => {
+    const normalized = text.toLowerCase();
+    const priceMatches = text.match(/r\$\s*[\d.,]+/gi)?.length || 0;
+    const tableWords = ['unidade', 'unid', 'valor', 'preço', 'preco', 'entrada', 'sinal', 'mensais', 'saldo', 'andar', 'coluna', 'área', 'area'];
+    const wordHits = tableWords.filter((word) => normalized.includes(word)).length;
+    return priceMatches >= 4 || (priceMatches >= 2 && wordHits >= 3);
+};
+
 // 1. Worker Initialization
 const initPDFWorker = async () => {
     if (pdfjsLib.GlobalWorkerOptions.workerSrc) return; 
@@ -211,6 +239,7 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
   const extractedImages: File[] = [];
   const ocrCandidates: { page: number; image: string }[] = [];
   const processedImageIds = new Set<string>();
+  const renderedPages: File[] = [];
 
   // Helper de conversão direta
   const convertRawImageToFile = async (imgObj: any, pageNum: number, imgId: string): Promise<File | null> => {
@@ -344,6 +373,9 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
               }
           } catch (e) {}
 
+          const renderedPage = await pageToFile(page, pageNum);
+          if (renderedPage) renderedPages.push(renderedPage);
+
           if (pageTextRaw.trim().length < 40 && ocrCandidates.length < 12) {
               const image = await renderPageForOCR(page);
               if (image) ocrCandidates.push({ page: pageNum, image });
@@ -379,6 +411,14 @@ export const extractDataFromPDF = async (pdfFile: File): Promise<ExtractedPDFDat
       if (ocrText.trim()) {
           fullText += `\n--- Texto OCR ---\n${ocrText}\n`;
       }
+  }
+
+  if (looksLikePriceTable(fullText)) {
+      return {
+          text: `--- TABELA DE VALORES ---
+Material identificado como tabela de valores. Gere apenas uma capa curta com nome do empreendimento/imóvel, preço inicial se existir e uma observação: "Tabela completa em anexo". Não transcreva a tabela.`,
+          images: renderedPages
+      };
   }
 
   return { text: fullText, images: extractedImages };
